@@ -178,7 +178,7 @@ void load_position_from_fen(Board *pos, const char *fen)
     // reset everything so nothing from a previous position survives
     *pos = (Board){0};
 
-    int rank = 8, file = 0;  // for file 0 represents a file, 1 b file, ...
+    int rank = 8, file = 0;  // for file, 0 represents a file, 1 b file, ...
 
     int i = 0;  // we are declaring i outside the loop because after the pieces are set we will use it for other tasks
 
@@ -283,7 +283,9 @@ void print_bitboard(U64 bitboard)
 
     for (int rank = 8; rank > 0; rank--)
     {
+        // prints rank number
         printf("%d ", rank);
+
         for (int file = 0; file < 8; file++)
         {
             int square = (rank - 1) * 8 + file;
@@ -291,8 +293,8 @@ void print_bitboard(U64 bitboard)
         }
         printf("\n");
     }
-    printf("\n   a b c d e f g h\n");
-    printf("\nhex: 0x%016llX\n\n", (unsigned long long)bitboard);
+    printf("\n   a b c d e f g h\n");  // prints file letter
+    printf("\nhex: 0x%016llX\n\n", (unsigned long long)bitboard);  // prints bitboard as 16-digit zero-padded uppercase hex
 }
 
 // prints the board using letters to symbolize pieces
