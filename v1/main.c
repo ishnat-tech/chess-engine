@@ -4,7 +4,7 @@
 // 1.  DONE Print functions: single bitboard as 8x8 grid, and full board with piece letters
 // 2.  DONE Decide extra board data: occupancy bitboards (white, black, all) and square-to-piece array
 // 3.  DONE FEN parsing
-// 4.  DONE (ig) Move representation: from, to, promotion, flags; plus text conversion (e2e4)
+// 4.  DONE Move representation: from, to, promotion, flags; plus text conversion (e2e4)
 // 5.  Attack generation: leapers (knight, king, pawn) via tables, then sliders (rook, bishop, queen)
 // 6.  "Is this square attacked?" function
 // 7.  Pseudo-legal move generation, including castling, en passant, promotion
@@ -24,8 +24,38 @@
 
 // using 64 bit integer for board representation otherwise known as bitboard
 typedef uint64_t U64;
-// 16 bits used in the moves struct
-typedef uint16_t U16;
+// 16 bit integer used for moves
+typedef uint16_t Move;
+
+// bits 0-5 used for "from square"
+// bits 6-11 used for "to square"
+// bits 12-15 is for special cases explained below
+
+// MOVE ENCODING (16 bits), from chessprogramming.org/Encoding_Moves
+//
+// bit:   15 14 13 12 | 11 10  9  8  7  6 |  5  4  3  2  1  0
+//        code (4)      to square (6)       from square (6)
+//
+// code bits: [ promotion | capture | special 1 | special 0 ]
+//
+// code  promo  capt  sp1  sp0   kind of move
+//  0     0      0     0    0    quiet move
+//  1     0      0     0    1    double pawn push
+//  2     0      0     1    0    king castle
+//  3     0      0     1    1    queen castle
+//  4     0      1     0    0    capture
+//  5     0      1     0    1    en passant capture
+//  6, 7  (unused)
+//  8     1      0     0    0    knight promotion
+//  9     1      0     0    1    bishop promotion
+// 10     1      0     1    0    rook promotion
+// 11     1      0     1    1    queen promotion
+// 12     1      1     0    0    knight promotion + capture
+// 13     1      1     0    1    bishop promotion + capture
+// 14     1      1     1    0    rook promotion + capture
+// 15     1      1     1    1    queen promotion + capture
+// 
+// we are taking advantage of the fact that 4 bits can store maximum 16 (0-15) numbers
 
 // bit manipulation macros inspired by (https://www.youtube.com/watch?v=A6Eu8xhwMkY)
 
@@ -36,8 +66,8 @@ typedef uint16_t U16;
 // to clear a square (turn the bit off) in a bitboard, in place (used different approach than video)
 #define pop_bit(bitboard, index) ((bitboard) &= ~(1ULL << (index)))  // Clears the bit at 'index' in place: ~(1ULL << index) is a mask of all 1s with a single 0 at that square, so &= forces that bit to 0 and leaves the other 63 unchanged (safe even if the bit was already 0).
 
-// packs from square, to square, and the code (in moves struct) to one 16-bit integer
-#define encode_move(from, to, code) ((U16) ((from) | ((to) << 6) | ((code) << 12)))
+// packs from square, to square, and the code to one 16-bit integer
+#define encode_move(from, to, code) ((Move) ((from) | ((to) << 6) | ((code) << 12)))
 // gets the from square from the integer made by encode_move
 #define get_from(encoded_move) ((encoded_move) & 0x3F)  // 0x3F = 0b111111
 // gets the to square from the integer made by encode_move
@@ -48,15 +78,15 @@ typedef uint16_t U16;
 // here move is the integer returned by the encode_move
 #define is_capture(move)       ((get_code(move)) & 0x4)  // returns 4 for true and zero for false
 #define is_promotion(move)     ((get_code(move)) & 0x8)  // returns 8 for true and zero for false
-#define is_en_passant(move)    ((get_code(move)) == EN_PASSANT)  // returns 1 for en_passant
-#define is_double_push(move)   ((get_code(move)) == DOUBLE_PUSH)  // returns 1 for double_push otherwise 0
-#define is_castle(move)        (((get_code(move)) == KING_CASTLE) || ((get_code(move)) == QUEEN_CASTLE))  //  
+#define is_en_passant(move)    ((get_code(move)) == MOVE_EN_PASSANT)  // returns 1 for en_passant
+#define is_double_push(move)   ((get_code(move)) == MOVE_DOUBLE_PUSH)  // returns 1 for double_push otherwise 0
+#define is_castle(move)        (((get_code(move)) == MOVE_KING_CASTLE) || ((get_code(move)) == MOVE_QUEEN_CASTLE))  //  
 #define promotion_piece(move)  ((get_code(move)) & 0x3)  // returns 0, 1, 2, 3 for knight, bishop, rook, queen respectively
 
 // for the moves struct (the last 4 bits)
-enum { MOVE_QUIET, DOUBLE_PUSH, KING_CASTLE, QUEEN_CASTLE, MOVE_CAPTURE, EN_PASSANT,
-       KNIGHT_PROMOTION = 8, BISHOP_PROMOTION, ROOK_PROMOTION, QUEEN_PROMOTION,
-       KNIGHT_PROMOTION_CAPTURE, BISHOP_PROMOTION_CAPTURE, ROOK_PROMOTION_CAPTURE, QUEEN_PROMOTION_CAPTURE };
+enum { MOVE_QUIET, MOVE_DOUBLE_PUSH, MOVE_KING_CASTLE, MOVE_QUEEN_CASTLE, MOVE_CAPTURE, MOVE_EN_PASSANT,
+       MOVE_KNIGHT_PROMOTION = 8, MOVE_BISHOP_PROMOTION, MOVE_ROOK_PROMOTION, MOVE_QUEEN_PROMOTION,
+       MOVE_KNIGHT_PROMOTION_CAPTURE, MOVE_BISHOP_PROMOTION_CAPTURE, MOVE_ROOK_PROMOTION_CAPTURE, MOVE_QUEEN_PROMOTION_CAPTURE };
 
 // index will be used in set_start_position
 // piece order matters: must match the letters string "PNBRQKpnbrqk" used when printing
@@ -94,42 +124,6 @@ typedef struct {
     int number_of_moves_counter;          
     bool white_turn;
 } Board;
-
-// Moves struct
-typedef struct {
-    U16 moves;
-
-    // bits 0-5 used for "from square"
-    // bits 6-11 used for "to square"
-    // bits 12-15 is for special cases explained below
-
-    // MOVE ENCODING (16 bits), from chessprogramming.org/Encoding_Moves
-    //
-    // bit:   15 14 13 12 | 11 10  9  8  7  6 |  5  4  3  2  1  0
-    //        code (4)      to square (6)       from square (6)
-    //
-    // code bits: [ promotion | capture | special 1 | special 0 ]
-    //
-    // code  promo  capt  sp1  sp0   kind of move
-    //  0     0      0     0    0    quiet move
-    //  1     0      0     0    1    double pawn push
-    //  2     0      0     1    0    king castle
-    //  3     0      0     1    1    queen castle
-    //  4     0      1     0    0    capture
-    //  5     0      1     0    1    en passant capture
-    //  6, 7  (unused)
-    //  8     1      0     0    0    knight promotion
-    //  9     1      0     0    1    bishop promotion
-    // 10     1      0     1    0    rook promotion
-    // 11     1      0     1    1    queen promotion
-    // 12     1      1     0    0    knight promotion + capture
-    // 13     1      1     0    1    bishop promotion + capture
-    // 14     1      1     1    0    rook promotion + capture
-    // 15     1      1     1    1    queen promotion + capture
-    // 
-    // we are taking advantage of the fact that 4 bits can store maximum 16 (0-15) numbers
-
-} Moves;
 
 // initialize variables in Board struct
 void set_start_position(Board *pos)
@@ -200,7 +194,7 @@ void load_position_from_fen(Board *pos, const char *fen)
         }
 
         // if empty spaces, which are denoted by numbers in fen
-        else if (isdigit(fen[i]))
+        else if (isdigit((unsigned char)(fen[i])))
         {
             int num = fen[i] - '0';  // converts the char number to an int number
             file += num;
@@ -269,7 +263,7 @@ void load_position_from_fen(Board *pos, const char *fen)
     {
         i++;
         pos->fifty_move_rule_counter = atoi(&fen[i]);  // atoi stops reading at the first non-digit
-        while (isdigit(fen[i])) i++;
+        while (isdigit((unsigned char)fen[i])) i++;
 
         if (fen[i] == ' ')
         {
@@ -338,35 +332,30 @@ void print_board(const Board *pos)
 }
 
 // prints moves
-void print_moves(U16 *move)
+void print_moves(Move *move)
 {
-    // from and to squares based on the indexing of bitboard.md
-    // since moves are not implemented yet initializing a random move
-
-    // move = encode_move(from_square, to_square, code);
-
-    if (get_code(*move) == KNIGHT_PROMOTION || get_code(*move) == KNIGHT_PROMOTION_CAPTURE)
+    if (get_code(*move) == MOVE_KNIGHT_PROMOTION || get_code(*move) == MOVE_KNIGHT_PROMOTION_CAPTURE)
     {
         printf("%s", square_names[get_from(*move)]);
         printf("%s", square_names[get_to(*move)]) ;
         printf("n\n\n");
     }
 
-    else if (get_code(*move) == BISHOP_PROMOTION || get_code(*move) == BISHOP_PROMOTION_CAPTURE)
+    else if (get_code(*move) == MOVE_BISHOP_PROMOTION || get_code(*move) == MOVE_BISHOP_PROMOTION_CAPTURE)
     {
         printf("%s", square_names[get_from(*move)]);
         printf("%s", square_names[get_to(*move)]) ;
         printf("b\n\n");
     }
 
-    else if (get_code(*move) == ROOK_PROMOTION || get_code(*move) == ROOK_PROMOTION_CAPTURE)
+    else if (get_code(*move) == MOVE_ROOK_PROMOTION || get_code(*move) == MOVE_ROOK_PROMOTION_CAPTURE)
     {
         printf("%s", square_names[get_from(*move)]);
         printf("%s", square_names[get_to(*move)]) ;
         printf("r\n\n");
     }
 
-    else if (get_code(*move) == QUEEN_PROMOTION || get_code(*move) == QUEEN_PROMOTION_CAPTURE)
+    else if (get_code(*move) == MOVE_QUEEN_PROMOTION || get_code(*move) == MOVE_QUEEN_PROMOTION_CAPTURE)
     {
         printf("%s", square_names[get_from(*move)]);
         printf("%s", square_names[get_to(*move)]) ;
@@ -376,7 +365,7 @@ void print_moves(U16 *move)
     else
     {
         printf("%s", square_names[get_from(*move)]);
-        printf("%s\n\n", square_names[get_to(*move)]) ;   
+        printf("%s\n\n", square_names[get_to(*move)]);   
     }
 }
 
@@ -395,11 +384,8 @@ int main(void)
 {
     Board board = {0}; // Initializing
     const char* fen = "r2q1rk1/pb1nbppp/1p2p3/2pp4/3P4/2NBP1B1/PPP1NPPP/R2Q1RK1 w - - 0 10";
-    U16 move = 5900;  // rn hardcoded e2 to e4 for testing
+    Move move = 5900;  // rn hardcoded e2 to e4 for testing
 
-    print_moves(&move);
-    set_start_position(&board);
-    rebuild_occupancies(&board);
     load_position_from_fen(&board, fen);
     print_board(&board);
     print_state(&board);
@@ -416,4 +402,3 @@ int main(void)
 // https://www.w3schools.com/
 
 // gemini
-// claude
