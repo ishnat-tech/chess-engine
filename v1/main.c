@@ -134,6 +134,18 @@ const U64 not_gh_file = 0x3F3F3F3F3F3F3F3FULL;  // g and h files cleared (knight
 // << 7 : up and toward a-file   >> 7 : down and toward h-file
 // << 8 : straight up            >> 8 : straight down
 
+// rooks, bishops and queens do not have a table because they depend on the position
+
+// king attacks table
+int king_attacks[64];
+
+// knight attacks table
+int knight_attacks[64];
+
+// pawn attacks table
+// indexed by side first then squares
+int pawn_attacks[2][62];
+
 // Board struct
 typedef struct {
     U64 bitboards[PIECE_COUNT];   // piece_count is at index 12 in enum  
