@@ -100,6 +100,8 @@ enum { WHITE_OCC, BLACK_OCC, BOTH_OCC, OCC_COUNT };
 // castling rights
 enum { WHITE_KING_SIDE = 8, WHITE_QUEEN_SIDE = 4, BLACK_KING_SIDE = 2, BLACK_QUEEN_SIDE = 1 };
 
+enum { WHITE, BLACK };
+
 // index 0 is a1 and so on, following the bitboard.md
 const char *square_names[64] = {
     "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
@@ -183,6 +185,34 @@ void rebuild_occupancies(Board *pos)
         pos->occupancies[BLACK_OCC] |= pos->bitboards[piece];
 
     pos->occupancies[BOTH_OCC] = pos->occupancies[WHITE_OCC] | pos->occupancies[BLACK_OCC];
+}
+
+// function in a square and outputs a bitboard representing attacked squares for king
+U64 compute_king_attacks(int square)
+{ 
+    // square is the square where the king is currently
+    int index = square;
+
+    U64 attack_bitboard = 0ULL;  // initialization
+    U64 piece_bitboard = 0ULL;   // initialization
+
+    set_bit(piece_bitboard, index);  // setting the bit at the square to 1
+    
+    // straight up or down, bits fall of the end therefore no masking
+    attack_bitboard |= (piece_bitboard << 8);  // up
+    attack_bitboard |= (piece_bitboard >> 8);  // down
+
+    // moving towards h file
+    attack_bitboard |= ((piece_bitboard << 9) & not_a_file);  // up and right
+    attack_bitboard |= ((piece_bitboard << 1) & not_a_file);  // right
+    attack_bitboard |= ((piece_bitboard >> 7) & not_a_file);  // down and right
+
+    // moving towards a file
+    attack_bitboard |= ((piece_bitboard << 7) & not_h_file);  // up and left
+    attack_bitboard |= ((piece_bitboard >> 1) & not_h_file);  // left
+    attack_bitboard |= ((piece_bitboard >> 9) & not_h_file);  // down and left
+
+    return attack_bitboard;
 }
 
 //  evaluation(const Board *pos)
