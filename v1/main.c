@@ -134,17 +134,18 @@ const U64 not_gh_file = 0x3F3F3F3F3F3F3F3FULL;  // g and h files cleared (knight
 // << 7 : up and toward a-file   >> 7 : down and toward h-file
 // << 8 : straight up            >> 8 : straight down
 
+
 // rooks, bishops and queens do not have a table because they depend on the position
 
 // king attacks table
-int king_attacks[64];
+U64 king_attacks[64];
 
 // knight attacks table
-int knight_attacks[64];
+U64 knight_attacks[64];
 
 // pawn attacks table
 // indexed by side first then squares
-int pawn_attacks[2][62];
+U64 pawn_attacks[2][62];
 
 // Board struct
 typedef struct {
@@ -272,6 +273,18 @@ U64 compute_pawn_attacks(int side, int square)
     return attack_bitboard;
 }
 
+// initializes attack table for leaper piece types
+void init_leaper_attack(void)
+{
+    for (int square = 0; square < 64; square++)
+    {
+        king_attacks[square] = compute_king_attacks(square);
+        knight_attacks[square] = compute_knight_attacks(square);
+        pawn_attacks[WHITE_SIDE][square] = compute_pawn_attacks(WHITE_SIDE, square);
+        pawn_attacks[BLACK_SIDE][square] = compute_pawn_attacks(BLACK_SIDE, square);
+    }
+}
+
 // function takes in a square and the bitboard (BOTH_OCCUPANCY) and outputs bitboard representing attaking square for rook
 U64 compute_rook_attacks(int square, U64 occupancy)
 {
@@ -312,6 +325,8 @@ U64 compute_rook_attacks(int square, U64 occupancy)
         set_bit(attack_bitboard, target);
         if (get_bit(occupancy, target)) break;
     }    
+
+    return attack_bitboard;
 }
 
 // function takes in a square and the bitboard (BOTH_OCCUPANCY) and outputs bitboard representing attaking square for rook
@@ -583,7 +598,7 @@ int main(void)
     Board board = {0}; // Initializing
     const char* fen = "r2q1rk1/pb1nbppp/1p2p3/2pp4/3P4/2NBP1B1/PPP1NPPP/R2Q1RK1 w - - 0 10";
     // Move move = 5900;  // rn hardcoded e2 to e4 for testing
-
+    init_leaper_attack();
     load_position_from_fen(&board, fen);
     print_board(&board);
     print_state(&board);
