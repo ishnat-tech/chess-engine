@@ -127,6 +127,11 @@ const U64 not_gh_file = 0x3F3F3F3F3F3F3F3FULL;  // g and h files cleared (knight
 // knights jump two files sideways in some moves, so those use the two-file masks (not_ab_file / not_gh_file)
 // shifts that only move up or down need no mask, since bits fall off the ends of the number, therefore no change is required
 
+// << 1 : toward h-file          >> 1 : toward a-file
+// << 9 : up and toward h-file   >> 9 : down and toward a-file
+// << 7 : up and toward a-file   >> 7 : down and toward h-file
+// << 8 : straight up            >> 8 : straight down
+
 // Board struct
 typedef struct {
     U64 bitboards[PIECE_COUNT];   // piece_count is at index 12 in enum  
