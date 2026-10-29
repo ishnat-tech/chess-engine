@@ -187,16 +187,6 @@ void rebuild_occupancies(Board *pos)
     pos->occupancies[BOTH_OCC] = pos->occupancies[WHITE_OCC] | pos->occupancies[BLACK_OCC];
 }
 
-//   northwest    north   northeast
-//   noWe         nort         noEa
-//           +7    +8    +9
-//               \  |  /
-//   west    -1 <-  0 -> +1    east
-//               /  |  \
-//           -9    -8    -7
-//   soWe         sout         soEa
-//   southwest    south   southeast
-
 // function takes in a square and outputs a bitboard representing attacked squares for king
 U64 compute_king_attacks(int square)
 { 
@@ -268,6 +258,48 @@ U64 compute_pawn_attacks(int side, int square)
     }
 
     return attack_bitboard;
+}
+
+// function takes in a square and the bitboard (BOTH_OCCUPANCY) and outputs bitboard representing attaking square for rook
+U64 compute_rook_attacks(int square, U64 occupancy)
+{
+    U64 attack_bitboard = 0ULL;  // initialization
+
+    // since square = (rank * 8) + file
+    int rank = square / 8;
+    int file = square % 8;
+
+    // up
+    for (int r = rank + 1; r <= 7; r++)
+    {
+        int target = r * 8 + file;
+        set_bit(attack_bitboard, target);  // first the bit is set then loop breaks so that we don't lose the attacked square
+        if (get_bit(occupancy, target)) break;
+    }
+
+    // down
+    for (int r = rank - 1; r >= 0; r--)
+    {
+        int target = r * 8 + file;
+        set_bit(attack_bitboard, target);
+        if (get_bit(occupancy, target)) break;
+    }
+
+    // right (toward h-file)
+    for (int f = file + 1; f <= 7; f++)
+    {
+        int target = rank * 8 + f;
+        set_bit(attack_bitboard, target);
+        if (get_bit(occupancy, target)) break;
+    }
+
+    // left (toward a-file)
+    for (int f = file - 1; f >= 0; f--)
+    {
+        int target = rank * 8 + f;
+        set_bit(attack_bitboard, target);
+        if (get_bit(occupancy, target)) break;
+    }    
 }
 
 //  evaluation(const Board *pos)
