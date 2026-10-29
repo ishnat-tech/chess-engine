@@ -187,16 +187,13 @@ void rebuild_occupancies(Board *pos)
     pos->occupancies[BOTH_OCC] = pos->occupancies[WHITE_OCC] | pos->occupancies[BLACK_OCC];
 }
 
-// function in a square and outputs a bitboard representing attacked squares for king
+// function takes in a square and outputs a bitboard representing attacked squares for king
 U64 compute_king_attacks(int square)
 { 
-    // square is the square where the king is currently
-    int index = square;
-
     U64 attack_bitboard = 0ULL;  // initialization
     U64 piece_bitboard = 0ULL;   // initialization
 
-    set_bit(piece_bitboard, index);  // setting the bit at the square to 1
+    set_bit(piece_bitboard, square);  // setting the bit at the square to 1
     
     // straight up or down, bits fall of the end therefore no masking
     attack_bitboard |= (piece_bitboard << 8);  // up
@@ -211,6 +208,29 @@ U64 compute_king_attacks(int square)
     attack_bitboard |= ((piece_bitboard << 7) & not_h_file);  // up and left
     attack_bitboard |= ((piece_bitboard >> 1) & not_h_file);  // left
     attack_bitboard |= ((piece_bitboard >> 9) & not_h_file);  // down and left
+
+    return attack_bitboard;
+}
+
+// function takes in a square and outputs a bitboard representing attacked squares for knight
+U64 comptute_knight_attacks(int square)
+{
+    U64 attack_bitboard = 0ULL;  // initialization
+    U64 piece_bitboard = 0ULL;   // initialization
+
+    set_bit(piece_bitboard, square);  // setting the bit at the square to 1
+
+    // jumps toward the h-file
+    attack_bitboard |= ((piece_bitboard << 17) & not_a_file);   // up 2, right 1
+    attack_bitboard |= ((piece_bitboard << 10) & not_ab_file);  // up 1, right 2
+    attack_bitboard |= ((piece_bitboard >> 6)  & not_ab_file);  // down 1, right 2
+    attack_bitboard |= ((piece_bitboard >> 15) & not_a_file);   // down 2, right 1
+
+    // jumps toward the a-file
+    attack_bitboard |= ((piece_bitboard << 15) & not_h_file);   // up 2, left 1
+    attack_bitboard |= ((piece_bitboard << 6)  & not_gh_file);  // up 1, left 2
+    attack_bitboard |= ((piece_bitboard >> 10) & not_gh_file);  // down 1, left 2
+    attack_bitboard |= ((piece_bitboard >> 17) & not_h_file);   // down 2, left 1
 
     return attack_bitboard;
 }
