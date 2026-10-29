@@ -1,4 +1,5 @@
 // Notes to self : 
+// double \n might confuse uci so take care of that
 
 // TODO
 // 1.  DONE Print functions: single bitboard as 8x8 grid, and full board with piece letters
@@ -145,7 +146,7 @@ U64 knight_attacks[64];
 
 // pawn attacks table
 // indexed by side first then squares
-U64 pawn_attacks[2][62];
+U64 pawn_attacks[2][64];
 
 // Board struct
 typedef struct {
@@ -285,7 +286,7 @@ void init_leaper_attack(void)
     }
 }
 
-// function takes in a square and the bitboard (BOTH_OCCUPANCY) and outputs bitboard representing attaking square for rook
+// function takes in a square and the bitboard (BOTH_OCCUPANCY) and outputs bitboard representing attacking square for rook
 U64 compute_rook_attacks(int square, U64 occupancy)
 {
     U64 attack_bitboard = 0ULL;  // initialization
@@ -329,7 +330,7 @@ U64 compute_rook_attacks(int square, U64 occupancy)
     return attack_bitboard;
 }
 
-// function takes in a square and the bitboard (BOTH_OCCUPANCY) and outputs bitboard representing attaking square for rook
+// function takes in a square and the bitboard (BOTH_OCCUPANCY) and outputs bitboard representing attacking square for bishop
 U64 compute_bishop_attacks(int square, U64 occupancy)
 {
     U64 attack_bitboard = 0ULL;
@@ -545,41 +546,22 @@ void print_board(const Board *pos)
 }
 
 // prints moves
-void print_moves(Move *move)
+void print_moves(Move move)
 {
-    if (get_code(*move) == MOVE_KNIGHT_PROMOTION || get_code(*move) == MOVE_KNIGHT_PROMOTION_CAPTURE)
+    printf("%s%s", square_names[get_from(move)], square_names[get_to(move)]);
+
+    if (is_promotion(move))
     {
-        printf("%s", square_names[get_from(*move)]);
-        printf("%s", square_names[get_to(*move)]);
-        printf("n\n\n");
+        switch (promotion_piece(move))
+        {
+            case 0: printf("n"); break;
+            case 1: printf("b"); break;
+            case 2: printf("r"); break;
+            case 3: printf("q"); break;
+        }
     }
 
-    else if (get_code(*move) == MOVE_BISHOP_PROMOTION || get_code(*move) == MOVE_BISHOP_PROMOTION_CAPTURE)
-    {
-        printf("%s", square_names[get_from(*move)]);
-        printf("%s", square_names[get_to(*move)]);
-        printf("b\n\n");
-    }
-
-    else if (get_code(*move) == MOVE_ROOK_PROMOTION || get_code(*move) == MOVE_ROOK_PROMOTION_CAPTURE)
-    {
-        printf("%s", square_names[get_from(*move)]);
-        printf("%s", square_names[get_to(*move)]);
-        printf("r\n\n");
-    }
-
-    else if (get_code(*move) == MOVE_QUEEN_PROMOTION || get_code(*move) == MOVE_QUEEN_PROMOTION_CAPTURE)
-    {
-        printf("%s", square_names[get_from(*move)]);
-        printf("%s", square_names[get_to(*move)]);
-        printf("q\n\n");
-    }
-
-    else
-    {
-        printf("%s", square_names[get_from(*move)]);
-        printf("%s\n\n", square_names[get_to(*move)]);   
-    }
+    printf("\n\n");
 }
 
 // prints the non-piece fields of a position
@@ -598,6 +580,7 @@ int main(void)
     Board board = {0}; // Initializing
     const char* fen = "r2q1rk1/pb1nbppp/1p2p3/2pp4/3P4/2NBP1B1/PPP1NPPP/R2Q1RK1 w - - 0 10";
     // Move move = 5900;  // rn hardcoded e2 to e4 for testing
+    // print_moves(move);
     init_leaper_attack();
     load_position_from_fen(&board, fen);
     print_board(&board);
