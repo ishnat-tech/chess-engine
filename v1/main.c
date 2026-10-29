@@ -432,28 +432,28 @@ void print_moves(Move *move)
     if (get_code(*move) == MOVE_KNIGHT_PROMOTION || get_code(*move) == MOVE_KNIGHT_PROMOTION_CAPTURE)
     {
         printf("%s", square_names[get_from(*move)]);
-        printf("%s", square_names[get_to(*move)]) ;
+        printf("%s", square_names[get_to(*move)]);
         printf("n\n\n");
     }
 
     else if (get_code(*move) == MOVE_BISHOP_PROMOTION || get_code(*move) == MOVE_BISHOP_PROMOTION_CAPTURE)
     {
         printf("%s", square_names[get_from(*move)]);
-        printf("%s", square_names[get_to(*move)]) ;
+        printf("%s", square_names[get_to(*move)]);
         printf("b\n\n");
     }
 
     else if (get_code(*move) == MOVE_ROOK_PROMOTION || get_code(*move) == MOVE_ROOK_PROMOTION_CAPTURE)
     {
         printf("%s", square_names[get_from(*move)]);
-        printf("%s", square_names[get_to(*move)]) ;
+        printf("%s", square_names[get_to(*move)]);
         printf("r\n\n");
     }
 
     else if (get_code(*move) == MOVE_QUEEN_PROMOTION || get_code(*move) == MOVE_QUEEN_PROMOTION_CAPTURE)
     {
         printf("%s", square_names[get_from(*move)]);
-        printf("%s", square_names[get_to(*move)]) ;
+        printf("%s", square_names[get_to(*move)]);
         printf("q\n\n");
     }
 
