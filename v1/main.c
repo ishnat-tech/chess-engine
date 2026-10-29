@@ -100,7 +100,7 @@ enum { WHITE_OCC, BLACK_OCC, BOTH_OCC, OCC_COUNT };
 // castling rights
 enum { WHITE_KING_SIDE = 8, WHITE_QUEEN_SIDE = 4, BLACK_KING_SIDE = 2, BLACK_QUEEN_SIDE = 1 };
 
-enum { WHITE, BLACK };
+enum { WHITE_SIDE, BLACK_SIDE };
 
 // index 0 is a1 and so on, following the bitboard.md
 const char *square_names[64] = {
@@ -213,7 +213,7 @@ U64 compute_king_attacks(int square)
 }
 
 // function takes in a square and outputs a bitboard representing attacked squares for knight
-U64 comptute_knight_attacks(int square)
+U64 compute_knight_attacks(int square)
 {
     U64 attack_bitboard = 0ULL;  // initialization
     U64 piece_bitboard = 0ULL;   // initialization
@@ -231,6 +231,31 @@ U64 comptute_knight_attacks(int square)
     attack_bitboard |= ((piece_bitboard << 6)  & not_gh_file);  // up 1, left 2
     attack_bitboard |= ((piece_bitboard >> 10) & not_gh_file);  // down 1, left 2
     attack_bitboard |= ((piece_bitboard >> 17) & not_h_file);   // down 2, left 1
+
+    return attack_bitboard;
+}
+
+// function takes in a square and the color of the pawn and outputs a bitboard representing attack squares for pawn
+// these are capture diagonals, pushes are handled in move generations
+U64 compute_pawn_attacks(int side, int square)
+{
+    // side takes 0 and 1 for white and black respectively, using enum
+
+    U64 attack_bitboard = 0ULL;  // initialization
+    U64 piece_bitboard = 0ULL;   // initialization
+
+    set_bit(piece_bitboard, square);  // setting the bit at  the square to 1
+
+    if (side == WHITE_SIDE)
+    {
+        attack_bitboard |= ((piece_bitboard << 9) & not_a_file);  // up and right
+        attack_bitboard |= ((piece_bitboard << 7) & not_h_file);  // up and left
+    }
+    else
+    {
+        attack_bitboard |= ((piece_bitboard >> 9) & not_h_file);  // down and left
+        attack_bitboard |= ((piece_bitboard >> 7) & not_a_file);  // down and right
+    }
 
     return attack_bitboard;
 }
