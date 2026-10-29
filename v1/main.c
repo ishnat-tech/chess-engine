@@ -114,6 +114,14 @@ const char *square_names[64] = {
 
 const char *piece_letters = "PNBRQKpnbrqk";
 
+// FILE MASKS: used to stop shifted bits from wrapping around the board edge.
+// bitboards for ensuring wrap around in a and h files
+
+const U64 not_a_file  = 0xFEFEFEFEFEFEFEFEULL;  // a-file cleared
+const U64 not_h_file  = 0x7F7F7F7F7F7F7F7FULL;  // h-file cleared
+const U64 not_ab_file = 0xFCFCFCFCFCFCFCFCULL;  // a and b files cleared (knight)
+const U64 not_gh_file = 0x3F3F3F3F3F3F3F3FULL;  // g and h files cleared (knight)
+
 // Board struct
 typedef struct {
     U64 bitboards[PIECE_COUNT];   // piece_count is at index 12 in enum  
@@ -386,7 +394,7 @@ int main(void)
 {
     Board board = {0}; // Initializing
     const char* fen = "r2q1rk1/pb1nbppp/1p2p3/2pp4/3P4/2NBP1B1/PPP1NPPP/R2Q1RK1 w - - 0 10";
-    Move move = 5900;  // rn hardcoded e2 to e4 for testing
+    // Move move = 5900;  // rn hardcoded e2 to e4 for testing
 
     load_position_from_fen(&board, fen);
     print_board(&board);
