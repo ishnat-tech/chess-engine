@@ -187,6 +187,16 @@ void rebuild_occupancies(Board *pos)
     pos->occupancies[BOTH_OCC] = pos->occupancies[WHITE_OCC] | pos->occupancies[BLACK_OCC];
 }
 
+//   northwest    north   northeast
+//   noWe         nort         noEa
+//           +7    +8    +9
+//               \  |  /
+//   west    -1 <-  0 -> +1    east
+//               /  |  \
+//           -9    -8    -7
+//   soWe         sout         soEa
+//   southwest    south   southeast
+
 // function takes in a square and outputs a bitboard representing attacked squares for king
 U64 compute_king_attacks(int square)
 { 
@@ -497,3 +507,4 @@ int main(void)
 // https://www.w3schools.com/
 
 // gemini
+// claude
