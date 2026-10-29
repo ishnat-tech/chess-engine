@@ -302,6 +302,55 @@ U64 compute_rook_attacks(int square, U64 occupancy)
     }    
 }
 
+// function takes in a square and the bitboard (BOTH_OCCUPANCY) and outputs bitboard representing attaking square for rook
+U64 compute_bishop_attacks(int square, U64 occupancy)
+{
+    U64 attack_bitboard = 0ULL;
+
+    int rank = square / 8;  // 0-based rank
+    int file = square % 8;  // 0-based file
+
+    // up and right
+    for (int r = rank + 1, f = file + 1; r <= 7 && f <= 7; r++, f++)
+    {
+        int target = r * 8 + f;
+        set_bit(attack_bitboard, target);  // first the bit is set then loop breaks so that we don't lose the attacked square
+        if (get_bit(occupancy, target)) break;
+    }
+
+    // up and left
+    for (int r = rank + 1, f = file - 1; r <= 7 && f >= 0; r++, f--)
+    {
+        int target = r * 8 + f;
+        set_bit(attack_bitboard, target);
+        if (get_bit(occupancy, target)) break;
+    }
+
+    // down and right
+    for (int r = rank - 1, f = file + 1; r >= 0 && f <= 7; r--, f++)
+    {
+        int target = r * 8 + f;
+        set_bit(attack_bitboard, target);
+        if (get_bit(occupancy, target)) break;
+    }
+
+    // down and left
+    for (int r = rank - 1, f = file - 1; r >= 0 && f >= 0; r--, f--)
+    {
+        int target = r * 8 + f;
+        set_bit(attack_bitboard, target);
+        if (get_bit(occupancy, target)) break;
+    }
+
+    return attack_bitboard;
+}
+
+// queen = rook rays + bishop rays
+U64 compute_queen_attacks(int square, U64 occupancy)
+{
+    return compute_rook_attacks(square, occupancy) | compute_bishop_attacks(square, occupancy);
+}
+
 //  evaluation(const Board *pos)
 // {
 // 
