@@ -122,6 +122,11 @@ const U64 not_h_file  = 0x7F7F7F7F7F7F7F7FULL;  // h-file cleared
 const U64 not_ab_file = 0xFCFCFCFCFCFCFCFCULL;  // a and b files cleared (knight)
 const U64 not_gh_file = 0x3F3F3F3F3F3F3F3FULL;  // g and h files cleared (knight)
 
+// if the shift moves the piece towards h-file, the danger is wrapping onto a-file, so AND with not_a_file
+// if the shift moves the piece towards a-file, the danger is wrapping onto h-file, so AND with not_h_file
+// knights jump two files sideways in some moves, so those use the two-file masks (not_ab_file / not_gh_file)
+// shifts that only move up or down need no mask, since bits fall off the ends of the number, therefore no change is required
+
 // Board struct
 typedef struct {
     U64 bitboards[PIECE_COUNT];   // piece_count is at index 12 in enum  
