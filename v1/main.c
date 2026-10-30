@@ -6,8 +6,8 @@
 // 2.  DONE Decide extra board data: occupancy bitboards (white, black, all) and square-to-piece array
 // 3.  DONE FEN parsing
 // 4.  DONE Move representation: from, to, promotion, flags; plus text conversion (e2e4)
-// 5.  Attack generation: leapers (knight, king, pawn) via tables, then sliders (rook, bishop, queen)
-// 6.  "Is this square attacked?" function
+// 5.  DONE Attack generation: leapers (knight, king, pawn) via tables, then sliders (rook, bishop, queen)
+// 6.  DONE "Is this square attacked?" function
 // 7.  Pseudo-legal move generation, including castling, en passant, promotion
 // 8.  Make move (copy-make first, undo later if needed)
 // 9.  Legality filter: discard moves that leave own king attacked
@@ -137,6 +137,7 @@ const U64 not_gh_file = 0x3F3F3F3F3F3F3F3FULL;  // g and h files cleared (knight
 
 
 // rooks, bishops and queens do not have a table because they depend on the position
+// array of bitboards
 
 // king attacks table
 U64 king_attacks[64];
@@ -379,6 +380,44 @@ U64 compute_queen_attacks(int square, U64 occupancy)
     return compute_rook_attacks(square, occupancy) | compute_bishop_attacks(square, occupancy);
 }
 
+// checks if a square is attacked
+bool is_square_attacked(const Board *pos, int square, int attacker)
+{
+    // board is const because this function doesn't change the board
+    
+    // returns true if any piece of side 'attacker' attacks 'square'
+    // works by looking outward from the target square: if a piece of each type standing on 'square'
+    // would hit a real attacker of that type, then that attacker hits 'square'
+    // relies on the piece enum layout: white pieces are 0-5 and black pieces are 6-11,
+    // so (attacker * 6) is the offset to the attacker's pieces
+
+    int offset = attacker * 6;  // 0 for white attacker, 6 for black attacker, to match the piece enum
+
+    // pawns: pawn attacks are not symmetric, so use the OPPOSITE side's pawn table
+    // (squares an opposing pawn on 'square' would hit = squares where an attacking pawn would have to stand)
+    if (pawn_attacks[1 - attacker][square] & pos->bitboards[WHITE_PAWN + offset]) return true;
+
+    // knights: knight attacks are symmetric, so squares a knight on 'square' could reach
+    // that hold an attacker's knight mean the square is attacked
+    if (knight_attacks[square] & pos->bitboards[WHITE_KNIGHT + offset]) return true;
+
+    // king: same idea as knights, using the king table and the attacker's king
+    if (king_attacks[square] & pos->bitboards[WHITE_KING + offset]) return true;
+
+    // bishops and queens: diagonal rays from 'square', stopped by any piece (BOTH_OCC),
+    // that reach an attacker's bishop or queen
+    if (compute_bishop_attacks(square, pos->occupancies[BOTH_OCC]) &
+        (pos->bitboards[WHITE_BISHOP + offset] | pos->bitboards[WHITE_QUEEN + offset])) return true;
+
+    // rooks and queens: straight rays from 'square', stopped by any piece (BOTH_OCC),
+    // that reach an attacker's rook or queen
+    if (compute_rook_attacks(square, pos->occupancies[BOTH_OCC]) &
+        (pos->bitboards[WHITE_ROOK + offset] | pos->bitboards[WHITE_QUEEN + offset])) return true;
+
+    // no check found an attacker, so the square is not attacked
+    return false;
+}
+
 //  evaluation(const Board *pos)
 // {
 // 
@@ -546,7 +585,7 @@ void print_board(const Board *pos)
 }
 
 // prints moves
-void print_moves(Move move)
+void print_move(Move move)
 {
     printf("%s%s", square_names[get_from(move)], square_names[get_to(move)]);
 
