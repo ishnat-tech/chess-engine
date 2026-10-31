@@ -12,6 +12,7 @@
 // 8.  Make move (copy-make first, undo later if needed)
 // 9.  Legality filter: discard moves that leave own king attacked
 // 10. Perft on standard test positions, use perft divide to find bugs
+// 10.5 Split the code into different files containing functions for different uses
 // 11. Evaluation: material, then piece-square tables, side-to-move perspective
 // 12. Negamax, then alpha-beta, then move ordering
 // 13. UCI loop, then connect to Cute Chess
@@ -83,6 +84,14 @@ typedef uint16_t Move;
 #define is_double_push(move)   ((get_code(move)) == MOVE_DOUBLE_PUSH)  // returns 1 for double_push otherwise 0
 #define is_castle(move)        (((get_code(move)) == MOVE_KING_CASTLE) || ((get_code(move)) == MOVE_QUEEN_CASTLE))  //  
 #define promotion_piece(move)  ((get_code(move)) & 0x3)  // returns 0, 1, 2, 3 for knight, bishop, rook, queen respectively
+
+// these are GCC built-ins, so every compiler won't support them
+
+// count trailing zeroes long long, gives the index of the first set-bit in the bitboard
+// lsb_index means index of the lowest set bit
+#define get_lsb_index(copy) (__builtin_ctzll(copy))
+// count long long, count the number of set bits
+#define count_bits(copy) (__builtin_popcountll(copy))
 
 // for the moves struct (the last 4 bits)
 enum { MOVE_QUIET, MOVE_DOUBLE_PUSH, MOVE_KING_CASTLE, MOVE_QUEEN_CASTLE, MOVE_CAPTURE, MOVE_EN_PASSANT,
