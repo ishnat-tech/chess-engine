@@ -89,9 +89,9 @@ typedef uint16_t Move;
 
 // count trailing zeroes long long, gives the index of the first set-bit in the bitboard
 // lsb_index means index of the lowest set bit
-#define get_lsb_index(copy) (__builtin_ctzll(copy))  // __builtin_ctzll(0) is not defined
+#define get_lsb_index(int) (__builtin_ctzll(int))  // __builtin_ctzll(0) is not defined
 // count long long, count the number of set bits
-#define count_bits(copy) (__builtin_popcountll(copy))
+#define count_bits(int) (__builtin_popcountll(int))
 
 // for the moves struct (the last 4 bits)
 enum { MOVE_QUIET, MOVE_DOUBLE_PUSH, MOVE_KING_CASTLE, MOVE_QUEEN_CASTLE, MOVE_CAPTURE, MOVE_EN_PASSANT,
@@ -625,7 +625,7 @@ void print_move(Move move)
         }
     }
 
-    printf("\n\n");
+    printf("\n");
 }
 
 // prints all the moves in the move list
@@ -638,6 +638,45 @@ void print_move_list(const Move_List *list)
     }
 
     printf("Total moves: %d\n", list->count);
+}
+
+// generates pseudo-legal knight moves
+void generate_knight_moves(const Board *pos, Move_List *list)
+{
+    int side = pos->white_turn ? WHITE_SIDE : BLACK_SIDE;  // white side is 0 and black side is 1
+
+    U64 knights = pos->bitboards[WHITE_KNIGHT + side * 6];  // using offset
+    U64 own_occ = pos->occupancies[side];
+    U64 enemy_occ = pos->occupancies[1-side];
+
+    // could have initialized directly but initialized like this for better readibility
+    U64 knights_copy = knights;  // making copy because pop_bit removes bit later, and we don't want original bitboard to be changed
+
+    // if there exists a knight
+    while (knights_copy)
+    {
+        // getting the first knight
+        // if there is only one knight the loop will run only once, if there are three knights the loop will run thrice
+        int from = get_lsb_index(knights_copy);
+
+        // getting the target square but removing the squares where pieces from the same color are there
+        U64 targets = knight_attacks[from] & (~own_occ);
+        U64 targets_copy = targets;
+
+        // for every target square
+        while (targets_copy)
+        {
+            // gets the first target square
+            int to = get_lsb_index(targets_copy);
+
+            if (get_bit(enemy_occ, to)) add_move(list, from, to, MOVE_CAPTURE);  // if enemy piece is at the target square, add move with code as MOVE_CAPTURE
+            else add_move(list, from, to, MOVE_QUIET);  // if enemy piece is not at the target square, add move with the code MOVE_QUIET
+
+            pop_bit(targets_copy, to);  // removes the target square so the loop can check the next target square
+        }
+
+        pop_bit(knights_copy, from);  // removes the knight so the loop can check the next knight
+    }
 }
 
 // prints the non-piece fields of a position
@@ -653,22 +692,13 @@ void print_state(const Board *pos)
 
 int main(void)
 {
-
     init_leaper_attack();
-
-    Board board = {0};  // Initializing
-    Move_List list = {0};  // Initializing
-
-    // const char* fen = "r2q1rk1/pb1nbppp/1p2p3/2pp4/3P4/2NBP1B1/PPP1NPPP/R2Q1RK1 w - - 0 10";
-    // Move move = 5900;  // rn hardcoded e2 to e4 for testing
-    // print_moves(move);
-    add_move(&list, 12, 28, MOVE_DOUBLE_PUSH);   // e2e4
-    add_move(&list, 36, 43, MOVE_CAPTURE);       // e5d6
-    print_move_list(&list);                      // expect 2 moves, total 2
-    // load_position_from_fen(&board, fen);
-    // print_board(&board);
-    // print_state(&board);
-    (void)board;  // removes the warning    
+    
+    Board board = {0};
+    Move_List list2 = {0};
+    load_position_from_fen(&board, "4k3/8/8/3p4/8/4N3/8/4K3 w - - 0 1");
+    generate_knight_moves(&board, &list2);
+    print_move_list(&list2);  // expect 8 moves, e3d5 being the capture
 }
 
 // References:
