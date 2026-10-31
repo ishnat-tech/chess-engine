@@ -89,7 +89,7 @@ typedef uint16_t Move;
 
 // count trailing zeroes long long, gives the index of the first set-bit in the bitboard
 // lsb_index means index of the lowest set bit
-#define get_lsb_index(copy) (__builtin_ctzll(copy))
+#define get_lsb_index(copy) (__builtin_ctzll(copy))  // __builtin_ctzll(0) is not defined
 // count long long, count the number of set bits
 #define count_bits(copy) (__builtin_popcountll(copy))
 
@@ -168,6 +168,12 @@ typedef struct {
     int number_of_moves_counter;          
     bool white_turn;
 } Board;
+
+typedef struct {
+    Move move[256];
+    int count;
+} Move_List;
+
 
 // initialize variables in Board struct
 void set_start_position(Board *pos)
@@ -427,6 +433,16 @@ bool is_square_attacked(const Board *pos, int square, int attacker)
     return false;
 }
 
+// adds move to move list
+void add_move(Move_List *list, int from, int to, int code)
+{
+    if (list->count < 256)  // guard against overflowing the array if a generator misbehaves
+    {
+        list->move[list->count] = encode_move(from, to, code);
+        list->count++;
+    }
+}
+
 //  evaluation(const Board *pos)
 // {
 // 
@@ -625,7 +641,8 @@ void print_state(const Board *pos)
 
 int main(void)
 {
-    Board board = {0}; // Initializing
+    Board board = {0};  // Initializing
+    // Move_List list = {0};  // Initializing
     const char* fen = "r2q1rk1/pb1nbppp/1p2p3/2pp4/3P4/2NBP1B1/PPP1NPPP/R2Q1RK1 w - - 0 10";
     // Move move = 5900;  // rn hardcoded e2 to e4 for testing
     // print_moves(move);
