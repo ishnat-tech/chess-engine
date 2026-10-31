@@ -718,6 +718,57 @@ void generate_king_moves(const Board *pos, Move_List *list)
     }
 }
 
+// generates pseudo-legal bishop, rook and queen moves
+void generate_slider_moves(const Board *pos, Move_List *list)
+{
+    int side = pos->white_turn ? WHITE_SIDE : BLACK_SIDE;  // white side is 0 and black side is 1
+
+    U64 own_occ = pos->occupancies[side];
+    U64 enemy_occ = pos->occupancies[1-side];
+    U64 both_occ = pos->occupancies[BOTH_OCC];  // sliders are stopped by any piece
+
+    // the three slider types, as white piece indices (the offset below turns them into black ones)
+    int slider_types[3] = {WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN};
+
+    // for every slider type
+    for (int t = 0; t < 3; t++)
+    {
+        int piece = slider_types[t];
+        U64 sliders_copy = pos->bitboards[piece + side * 6];  // using offset, copy because pop_bit removes bits later
+
+        // if there exists a piece of this type
+        while (sliders_copy)
+        {
+            // getting one piece of this type
+            int from = get_lsb_index(sliders_copy);
+
+            // the only part that differs between the three pieces is how the attacks are computed
+            U64 attacks;
+            if (piece == WHITE_BISHOP) attacks = compute_bishop_attacks(from, both_occ);
+            else if (piece == WHITE_ROOK) attacks = compute_rook_attacks(from, both_occ);
+            else attacks = compute_queen_attacks(from, both_occ);
+
+            // removing the squares where pieces from the same color are there
+            U64 targets = attacks & (~own_occ);
+            U64 targets_copy = targets;
+
+            // for every target square
+            while (targets_copy)
+            {
+                // gets the first target square
+                int to = get_lsb_index(targets_copy);
+
+                if (get_bit(enemy_occ, to)) add_move(list, from, to, MOVE_CAPTURE);  // enemy piece at the target square
+                else add_move(list, from, to, MOVE_QUIET);  // empty target square
+
+                pop_bit(targets_copy, to);  // removes the target square so the loop can check the next one
+            }
+
+            pop_bit(sliders_copy, from);  // removes this piece so the loop can check the next one
+        }
+    }
+}
+
 // prints the non-piece fields of a position
 void print_state(const Board *pos)
 {
