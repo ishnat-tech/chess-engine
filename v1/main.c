@@ -679,6 +679,45 @@ void generate_knight_moves(const Board *pos, Move_List *list)
     }
 }
 
+// generates pseudo-legal king moves (castling is handled separately)
+void generate_king_moves(const Board *pos, Move_List *list)
+{
+    int side = pos->white_turn ? WHITE_SIDE : BLACK_SIDE;  // white side is 0 and black side is 1
+
+    U64 kings = pos->bitboards[WHITE_KING + side * 6];  // using offset
+    U64 own_occ = pos->occupancies[side];
+    U64 enemy_occ = pos->occupancies[1-side];
+
+    // could have initialized directly but initialized like this for better readibility
+    U64 kings_copy = kings;  // making copy because pop_bit removes bit later, and we don't want original bitboard to be changed
+
+    // if there exists a king
+    while (kings_copy)
+    {
+        // getting the king
+        // a side normally has only one king, so this loop runs once, but the shape matches the other generators
+        int from = get_lsb_index(kings_copy);
+
+        // getting the target square but removing the squares where pieces from the same color are there
+        U64 targets = king_attacks[from] & (~own_occ);
+        U64 targets_copy = targets;
+
+        // for every target square
+        while (targets_copy)
+        {
+            // gets the first target square
+            int to = get_lsb_index(targets_copy);
+
+            if (get_bit(enemy_occ, to)) add_move(list, from, to, MOVE_CAPTURE);  // if enemy piece is at the target square, add move with code as MOVE_CAPTURE
+            else add_move(list, from, to, MOVE_QUIET);  // if enemy piece is not at the target square, add move with the code MOVE_QUIET
+
+            pop_bit(targets_copy, to);  // removes the target square so the loop can check the next target square
+        }
+
+        pop_bit(kings_copy, from);  // removes the king so the loop can check the next king
+    }
+}
+
 // prints the non-piece fields of a position
 void print_state(const Board *pos)
 {
@@ -693,12 +732,6 @@ void print_state(const Board *pos)
 int main(void)
 {
     init_leaper_attack();
-    
-    Board board = {0};
-    Move_List list2 = {0};
-    load_position_from_fen(&board, "4k3/8/8/3p4/8/4N3/8/4K3 w - - 0 1");
-    generate_knight_moves(&board, &list2);
-    print_move_list(&list2);  // expect 8 moves, e3d5 being the capture
 }
 
 // References:
