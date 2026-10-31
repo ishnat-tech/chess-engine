@@ -628,6 +628,18 @@ void print_move(Move move)
     printf("\n\n");
 }
 
+// prints all the moves in the move list
+void print_move_list(const Move_List *list)
+{
+    for (int i = 0; i < list->count; i++)
+    {
+        printf("%d. ", i+1);
+        print_move(list->move[i]);
+    }
+
+    printf("Total moves: %d\n", list->count);
+}
+
 // prints the non-piece fields of a position
 void print_state(const Board *pos)
 {
@@ -641,15 +653,22 @@ void print_state(const Board *pos)
 
 int main(void)
 {
+
+    init_leaper_attack();
+
     Board board = {0};  // Initializing
-    // Move_List list = {0};  // Initializing
-    const char* fen = "r2q1rk1/pb1nbppp/1p2p3/2pp4/3P4/2NBP1B1/PPP1NPPP/R2Q1RK1 w - - 0 10";
+    Move_List list = {0};  // Initializing
+
+    // const char* fen = "r2q1rk1/pb1nbppp/1p2p3/2pp4/3P4/2NBP1B1/PPP1NPPP/R2Q1RK1 w - - 0 10";
     // Move move = 5900;  // rn hardcoded e2 to e4 for testing
     // print_moves(move);
-    init_leaper_attack();
-    load_position_from_fen(&board, fen);
-    print_board(&board);
-    print_state(&board);
+    add_move(&list, 12, 28, MOVE_DOUBLE_PUSH);   // e2e4
+    add_move(&list, 36, 43, MOVE_CAPTURE);       // e5d6
+    print_move_list(&list);                      // expect 2 moves, total 2
+    // load_position_from_fen(&board, fen);
+    // print_board(&board);
+    // print_state(&board);
+    (void)board;  // removes the warning    
 }
 
 // References:
