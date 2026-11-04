@@ -1,5 +1,5 @@
 // Notes to self : 
-// double \n might confuse uci so take care of that
+// gcc -Wall -Wextra main.c -o main ; ./main
 
 // TODO
 // 1.  DONE Print functions: single bitboard as 8x8 grid, and full board with piece letters
@@ -744,6 +744,7 @@ void generate_slider_moves(const Board *pos, Move_List *list)
 
             // the only part that differs between the three pieces is how the attacks are computed
             U64 attacks;
+
             if (piece == WHITE_BISHOP) attacks = compute_bishop_attacks(from, both_occ);
             else if (piece == WHITE_ROOK) attacks = compute_rook_attacks(from, both_occ);
             else attacks = compute_queen_attacks(from, both_occ);
@@ -766,6 +767,110 @@ void generate_slider_moves(const Board *pos, Move_List *list)
 
             pop_bit(sliders_copy, from);  // removes this piece so the loop can check the next one
         }
+    }
+}
+
+// generates pseudo-legal pawn moves: pushes, double pushes, captures, promotions and en passant
+void generate_pawn_moves(const Board *pos, Move_List *list)
+{
+    int side = pos->white_turn ? WHITE_SIDE : BLACK_SIDE;  // white side is 0 and black side is 1
+
+    U64 enemy_occ = pos->occupancies[1 - side];
+    U64 both_occ = pos->occupancies[BOTH_OCC];  // pushes are blocked by any piece, of either color
+
+    // pawns are the only piece whose direction and special ranks depend on the color
+    int push_step, start_rank, pre_promo_rank;
+
+    if (side == WHITE_SIDE)
+    {
+        push_step      = 8;   // white moves up the board
+        start_rank     = 1;   // rank 2, squares 8..15
+        pre_promo_rank = 6;   // rank 7, squares 48..55
+    }
+    else
+    {
+        push_step      = -8;  // black moves down the board
+        start_rank     = 6;   // rank 7, squares 48..55
+        pre_promo_rank = 1;   // rank 2, squares 8..15
+    }
+
+    U64 pawn_copy = pos->bitboards[WHITE_PAWN + side * 6];  // using offset, copy because pop_bit removes bits later, and we don't want original bitboard to be changed
+
+    // if there exists a pawn
+    while (pawn_copy)
+    {
+        // getting one pawn
+        int from = get_lsb_index(pawn_copy);
+        int rank = from / 8;  // truncation gives the 0-based rank
+
+        // single push: the square directly in front must be empty
+        int to = from + push_step;
+
+        if (!get_bit(both_occ, to))
+        {
+            // a pawn on the rank before promotion promotes when it pushes, so four moves are added, one per piece
+            if (rank == pre_promo_rank)
+            {
+                add_move(list, from, to, MOVE_KNIGHT_PROMOTION);
+                add_move(list, from, to, MOVE_BISHOP_PROMOTION);
+                add_move(list, from, to, MOVE_ROOK_PROMOTION);
+                add_move(list, from, to, MOVE_QUEEN_PROMOTION);
+            }
+            else
+            {
+                add_move(list, from, to, MOVE_QUIET);
+
+                // double push: only from the start rank, and only if the single push square was empty (checked above) and the square after it is empty too
+                if (rank == start_rank)
+                {
+                    int to2 = from + 2 * push_step;
+
+                    if (!get_bit(both_occ, to2))
+                    {
+                        add_move(list, from, to2, MOVE_DOUBLE_PUSH);
+                    }
+                }
+            }
+        }
+
+        // captures: the diagonal squares from the pawn attack table that hold an enemy piece
+        U64 attacks = pawn_attacks[side][from] & enemy_occ;
+
+        // for every capture square
+        while (attacks)
+        {
+            // gets the first capture square
+            to = get_lsb_index(attacks);
+
+            // a capture on the last step also promotes, so four moves are added, one per piece
+            if (rank == pre_promo_rank)
+            {
+                add_move(list, from, to, MOVE_KNIGHT_PROMOTION_CAPTURE);
+                add_move(list, from, to, MOVE_BISHOP_PROMOTION_CAPTURE);
+                add_move(list, from, to, MOVE_ROOK_PROMOTION_CAPTURE);
+                add_move(list, from, to, MOVE_QUEEN_PROMOTION_CAPTURE);
+            }
+            else
+            {
+                add_move(list, from, to, MOVE_CAPTURE);
+            }
+
+            pop_bit(attacks, to);  // removes the capture square so the loop can check the next one
+        }
+
+        // en passant: the en passant square is empty, so it is not in enemy_occ and needs its own check
+        if (pos->en_passant)
+        {
+            U64 ep_attacks = pawn_attacks[side][from] & pos->en_passant;  // non-zero if this pawn attacks the en passant square
+
+            if (ep_attacks)
+            {
+                to = get_lsb_index(ep_attacks);  // only one bit can be set, since the board stores one en passant square
+                add_move(list, from, to, MOVE_EN_PASSANT);
+            }
+        }
+
+        pop_bit(pawn_copy, from);  // removes this pawn so the loop can check the next one
     }
 }
 
