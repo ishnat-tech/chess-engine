@@ -874,6 +874,62 @@ void generate_pawn_moves(const Board *pos, Move_List *list)
     }
 }
 
+// generates pseudo-legal castling moves (the king must not castle out of, through or into check)
+void generate_castling_moves(const Board *pos, Move_List *list)
+{
+    int side = pos->white_turn ? WHITE_SIDE : BLACK_SIDE;  // white side is 0 and black side is 1
+    int enemy = 1 - side;                                  // the side whose attacks we must avoid
+    U64 both_occ = pos->occupancies[BOTH_OCC];             // squares between king and rook must be empty
+
+    if (side == WHITE_SIDE)
+    {
+        // the king must be on its start square, which also means it is not in check
+        if (!get_bit(pos->bitboards[WHITE_KING], 4)) return;  // e1 = 4
+        if (is_square_attacked(pos, 4, enemy)) return;
+
+        // king side: f1 (5) and g1 (6) empty, and neither attacked
+        if ((pos->castling_rights & WHITE_KING_SIDE) &&
+            get_bit(pos->bitboards[WHITE_ROOK], 7) &&  // rook still on h1
+            !get_bit(both_occ, 5) && !get_bit(both_occ, 6) &&
+            !is_square_attacked(pos, 5, enemy) && !is_square_attacked(pos, 6, enemy))
+        {
+            add_move(list, 4, 6, MOVE_KING_CASTLE);
+        }
+
+        // queen side: b1 (1), c1 (2), d1 (3) empty, but only c1 and d1 must be unattacked (the rook may pass through an attacked b1)
+        if ((pos->castling_rights & WHITE_QUEEN_SIDE) &&
+            get_bit(pos->bitboards[WHITE_ROOK], 0) &&  // rook still on a1
+            !get_bit(both_occ, 1) && !get_bit(both_occ, 2) && !get_bit(both_occ, 3) &&
+            !is_square_attacked(pos, 3, enemy) && !is_square_attacked(pos, 2, enemy))
+        {
+            add_move(list, 4, 2, MOVE_QUEEN_CASTLE);
+        }
+    }
+    else
+    {
+        if (!get_bit(pos->bitboards[BLACK_KING], 60)) return;  // e8 = 60
+        if (is_square_attacked(pos, 60, enemy)) return;
+
+        // king side: f8 (61) and g8 (62)
+        if ((pos->castling_rights & BLACK_KING_SIDE) &&
+            get_bit(pos->bitboards[BLACK_ROOK], 63) &&  // rook still on h8
+            !get_bit(both_occ, 61) && !get_bit(both_occ, 62) &&
+            !is_square_attacked(pos, 61, enemy) && !is_square_attacked(pos, 62, enemy))
+        {
+            add_move(list, 60, 62, MOVE_KING_CASTLE);
+        }
+
+        // queen side: b8 (57), c8 (58), d8 (59) empty; c8 and d8 unattacked
+        if ((pos->castling_rights & BLACK_QUEEN_SIDE) &&
+            get_bit(pos->bitboards[BLACK_ROOK], 56) &&  // rook still on a8
+            !get_bit(both_occ, 57) && !get_bit(both_occ, 58) && !get_bit(both_occ, 59) &&
+            !is_square_attacked(pos, 59, enemy) && !is_square_attacked(pos, 58, enemy))
+        {
+            add_move(list, 60, 58, MOVE_QUEEN_CASTLE);
+        }
+    }
+}
+
 // prints the non-piece fields of a position
 void print_state(const Board *pos)
 {
