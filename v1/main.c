@@ -8,7 +8,7 @@
 // 4.  DONE Move representation: from, to, promotion, flags; plus text conversion (e2e4)
 // 5.  DONE Attack generation: leapers (knight, king, pawn) via tables, then sliders (rook, bishop, queen)
 // 6.  DONE "Is this square attacked?" function
-// 7.  Pseudo-legal move generation, including castling, en passant, promotion
+// 7.  DONE Pseudo-legal move generation, including castling, en passant, promotion
 // 8.  Make move (copy-make first, undo later if needed)
 // 9.  Legality filter: discard moves that leave own king attacked
 // 10. Perft on standard test positions, use perft divide to find bugs
